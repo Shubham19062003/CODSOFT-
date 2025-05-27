@@ -1,0 +1,81 @@
+# Step 1: Upload the dataset
+from google.colab import files
+uploaded = files.upload()
+# Step 2: Import libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, precision_score, recall_score, f1_score
+from imblearn.over_sampling import SMOTE
+
+# Step 3: Load dataset
+df = pd.read_csv('creditcard.csv')
+print("Shape of dataset:", df.shape)
+df.head()
+# Check for missing values
+print("\nMissing values:")
+print(df.isnull().sum())
+
+# Normalize 'Amount' column
+scaler = StandardScaler()
+df['normAmount'] = scaler.fit_transform(df[['Amount']])
+df = df.drop(['Time', 'Amount'], axis=1)
+
+# Separate features and target
+X = df.drop('Class', axis=1)
+y = df['Class']
+
+# Check class distribution
+print("\nClass distribution:")
+print(y.value_counts())
+# Split before applying SMOTE to prevent data leakage
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Apply SMOTE to training data only
+sm = SMOTE(random_state=42)
+X_train_res, y_train_res = sm.fit_resample(X_train, y_train)
+
+print("\nAfter SMOTE:")
+print("Class distribution in training data:")
+print(y_train_res.value_counts())
+# Train Random Forest
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf.fit(X_train_res, y_train_res)
+
+# Predict on test set
+y_pred = rf.predict(X_test)
+# Confusion matrix and classification report
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Custom metrics
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+
+print("\nPrecision:", precision)
+print("Recall:", recall)
+print("F1-Score:", f1)
+
+# Plot Confusion Matrix
+sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d', cmap='Blues')
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+# Logistic Regression
+log_model = LogisticRegression(max_iter=1000)
+log_model.fit(X_train_res, y_train_res)
+y_log_pred = log_model.predict(X_test)
+
+print("\nLogistic Regression Performance:")
+print(classification_report(y_test, y_log_pred))
